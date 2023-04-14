@@ -68,9 +68,13 @@ class ScrapyCheckItem(scrapy.Item, CheckItem):
 
     def __setitem__(self, key, value):
         if key in self.fields:
-            field = self.fields[key]['check_field']
-            field.input(key, value)
-            self._values[key] = field.value
+            field = self.fields[key]
+            check_field = field.get('check_field')
+            if check_field:
+                check_field.input(key, value)
+                self._values[key] = check_field.value
+            else:
+                self._values[key] = value
         else:
             raise KeyError(
                 f"{self.__class__.__name__} does not support field: {key}")

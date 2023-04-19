@@ -57,6 +57,13 @@ from gggifcheck.items import CheckItem
 
 class ScrapyCheckItem(scrapy.Item, CheckItem):
 
+    def __init__(self, *args, **kwargs):
+        self._values = {}
+        self.check_fields = {}
+        if args or kwargs:
+            for k, v in dict(*args, **kwargs).items():
+                self[k] = v
+
     def __getitem__(self, key):
         if key in self.fields and key not in self._values:
             value = None
@@ -69,9 +76,10 @@ class ScrapyCheckItem(scrapy.Item, CheckItem):
     def __setitem__(self, key, value):
         if key in self.fields:
             field = self.fields[key]
-            check_field = field.get('check_field')
-            if check_field:
-                check_field.input(key, value)
+            build_check_field = field.get('build_check_field')
+            if build_check_field:
+                check_field = build_check_field.build(key=key, value=value)
+                self.check_fields[key] = check_field
                 self._values[key] = check_field.value
             else:
                 self._values[key] = value
@@ -80,7 +88,7 @@ class ScrapyCheckItem(scrapy.Item, CheckItem):
                 f"{self.__class__.__name__} does not support field: {key}")
 
     def __setattr__(self, name, value):
-        if name.startswith('_'):
+        if name.startswith('_') or name in ['check_fields']:
             self.__dict__[name] = value
         else:
             raise AttributeError(
@@ -90,6 +98,20 @@ class ScrapyCheckItem(scrapy.Item, CheckItem):
         self._process_and_check()
         _ = [self[field] for field in self.fields]  # 进行所有字段检查
         return self._values.keys()
+
+    def get_base_value(self, key):
+        if key in self.check_fields:
+            return self.check_fields[key].base_value
+        elif key in self.fields:
+            field = self.fields[key]
+            build_check_field = field.get('build_check_field')
+            if build_check_field:
+                return build_check_field.build_default(
+                    key=key, value=None).base_value
+            return self.fields[key] or None
+        else:
+            raise KeyError(
+                f"{self.__class__.__name__} does not support field: {key}")
 
 
 # 示例

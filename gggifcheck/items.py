@@ -169,3 +169,18 @@ class CheckItem(MutableMapping, ItemMeta):
     def keys(self):  # to dict时优先调用，不会调用__iter__和__len__，但必须实现
         self._process_and_check()
         return self.fields.keys()
+
+
+class BuildCheckField(object):
+    def __init__(self, check_field_class, **kwargs):
+        self.check_field_class = check_field_class
+        self.kwargs = kwargs
+
+    def build(self, key, value):
+        check_field = self.check_field_class(**self.kwargs)
+        check_field.input(key, value)
+        return check_field
+
+    def build_default(self, key, value=None):
+        return self.check_field_class(
+            key=key, value=value, **self.kwargs)

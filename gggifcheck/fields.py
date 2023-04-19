@@ -54,6 +54,10 @@ class CheckField(object):
     def value(self):
         return self.output()
 
+    @property
+    def base_value(self):
+        return self._value
+
     def check(self):
         errors = self._check()
         for error in errors:

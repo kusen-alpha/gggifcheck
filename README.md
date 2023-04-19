@@ -52,7 +52,7 @@ print(dict(item))
 # 对scrapy Item进行改写
 import scrapy
 from gggifcheck import fields
-from gggifcheck.items import CheckItem
+from gggifcheck.items import CheckItem, BuildCheckField
 
 
 class ScrapyCheckItem(scrapy.Item, CheckItem):
@@ -117,11 +117,12 @@ class ScrapyCheckItem(scrapy.Item, CheckItem):
 # 示例
 class PostItem(ScrapyCheckItem):
     id = scrapy.Field(
-        check_field=fields.MD5CheckField(
-            nullable=False))
+        build_check_field=BuildCheckField(
+            check_field_class=fields.MD5CheckField, nullable=False))
     channel = scrapy.Field(
-        check_field=fields.IntegerCheckField(nullable=False, min_value=1,
-                                             max_value=6))
+        build_check_field=BuildCheckField(
+            check_field_class=fields.IntegerCheckField,
+            nullable=False, min_value=1, max_value=6))
 
 
 item = PostItem()

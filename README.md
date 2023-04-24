@@ -94,9 +94,20 @@ class ScrapyCheckItem(scrapy.Item, CheckItem):
             raise AttributeError(
                 f"Use item[{name!r}] = {value!r} to set field value")
 
-    def keys(self):
+    def check_all(self):
+        """
+        进行所有字段检查
+        :return:
+        """
         self._process_and_check()
-        _ = [self[field] for field in self.fields]  # 进行所有字段检查
+        _ = [self[field] for field in self.fields]
+
+    def keys(self):
+        # 不能放在此处验证的原因是scrapy item进入pipeline前有日志打印等操作导致进行
+        # 此处验证，导致如果在pipeline里进行透传时验证不生效，提前检查报错，此处验证放
+        # 在check_all方法中，因此需要手动调用
+        # self._process_and_check()
+        # _ = [self[field] for field in self.fields]  # 进行所有字段检查
         return self._values.keys()
 
     def get_base_value(self, key):

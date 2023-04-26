@@ -27,15 +27,16 @@ print(s.value)
 ### 使用CheckItem
 
 ```python
-from gggifcheck.fields import StringCheckField
-from gggifcheck.items import CheckItem
+from gggifcheck import fields, items
 
 
-class TestCheckItem(CheckItem):
-    a = StringCheckField(min_length=1, max_length=2, contains=['a'],
-                         excludes=['b'])
-    b = StringCheckField(min_length=1, max_length=2, contains=['a'],
-                         excludes=['c'])
+class TestCheckItem(items.CheckItem):
+    a = items.BuildCheckField(
+        check_field_class=fields.StringCheckField, min_length=1, 
+        max_length=2, contains=['a'], excludes=['b'])
+    b = items.BuildCheckField(
+        check_field_class=fields.StringCheckField, min_length=1, 
+        max_length=2, contains=['a'], excludes=['c'])
 
 
 item = TestCheckItem()

@@ -7,17 +7,15 @@
 import itertools
 from collections.abc import MutableMapping
 
-from .fields import CheckField
-
 
 class ItemMeta(object):
     def __new__(cls, *args, **kwargs):
-        fields = {}
+        build_fields = {}
         for n in dir(cls):
             v = getattr(cls, n)
-            if isinstance(v, CheckField):
-                fields[n] = v
-        cls.fields = fields
+            if isinstance(v, BuildCheckField):
+                build_fields[n] = v
+        cls.build_fields = build_fields
         return super().__new__(cls)
 
 
@@ -31,13 +29,14 @@ class CheckItem(MutableMapping, ItemMeta):
     bundle_errors = []  # 是否一次性返回所有错误，暂时没有使用该字段
 
     def __init__(self, *args, **kwargs):
+        self.check_fields = {}
         if args or kwargs:
             for k, v in dict(*args, **kwargs).items():
-                self.fields[k].input(k, v)
+                self[k] = v
 
     def process(self):
         for key in itertools.chain(self._get_config_attr_names(),
-                                   self.fields.keys()):
+                                   self.build_fields.keys()):
             field_name = key
             if not key.startswith('_'):
                 field_name = '_' + field_name
@@ -48,7 +47,7 @@ class CheckItem(MutableMapping, ItemMeta):
 
     def check(self):
         for key in itertools.chain(self._get_config_attr_names(),
-                                   self.fields.keys()):
+                                   self.build_fields.keys()):
             field_name = key
             if not key.startswith('_'):
                 field_name = '_' + field_name
@@ -122,18 +121,19 @@ class CheckItem(MutableMapping, ItemMeta):
         return attr_names
 
     def __setitem__(self, key, value):
-        if key in self.fields:
-            self.fields[key].input(key, value)
+        if key in self.build_fields:
+            self.check_fields[key] = self.build_fields[key].build(
+                key=key, value=value)
         else:
             raise KeyError(
                 f"{self.__class__.__name__} does not support field: {key}")
 
     def __getitem__(self, key):
-        if key in self.fields:
-            field = self.fields[key]
+        if key in self.check_fields:
+            field = self.check_fields[key]
             if not field.key:
                 field.key = key
-            return self.fields[key].value
+            return self.check_fields[key].value
         elif key in self.__dict__:
             return self.__dict__[key]
         else:
@@ -141,14 +141,14 @@ class CheckItem(MutableMapping, ItemMeta):
                 f"{self.__class__.__name__} does not have field: {key}")
 
     def __delitem__(self, key):
-        del self.fields[key]
+        del self.check_fields[key]
 
     def __len__(self):
         return len(self.__dict__.keys())
 
     def __iter__(self):
         self._process_and_check()
-        return iter(self.fields)
+        return iter(self.build_fields)
 
     def _process_and_check(self):
         self.process()
@@ -160,7 +160,7 @@ class CheckItem(MutableMapping, ItemMeta):
         raise AttributeError(f"Use item[{name!r}] to get field value")
 
     def __setattr__(self, name, value):
-        if name in self.__dict__:
+        if name in self.__dict__ or name in ['check_fields']:
             self.__dict__[name] = value
         else:
             raise AttributeError(
@@ -168,7 +168,7 @@ class CheckItem(MutableMapping, ItemMeta):
 
     def keys(self):  # to dict时优先调用，不会调用__iter__和__len__，但必须实现
         self._process_and_check()
-        return self.fields.keys()
+        return self.build_fields.keys()
 
 
 class BuildCheckField(object):

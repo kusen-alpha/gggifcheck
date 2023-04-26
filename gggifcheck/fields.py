@@ -75,8 +75,9 @@ class CheckField(object):
             return []
         if not isinstance(self._value, self.types):
             self._type_checked = False
-            error_msg = 'Field %s input: %s, is not types: %s' % (
-                self.key, self._value, self.types)
+            error_msg = ('Field %s input: %s, the type is %s, is not '
+                         'types: %s') % (
+                self.key, self._value, type(self._value), self.types)
             return [Exception(error_msg)]
         return []
 

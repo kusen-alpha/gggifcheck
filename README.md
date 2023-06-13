@@ -31,11 +31,9 @@ from gggifcheck import fields, items
 
 
 class TestCheckItem(items.CheckItem):
-    a = items.BuildCheckField(
-        check_field_class=fields.StringCheckField, min_length=1, 
+    a = fields.StringCheckField(min_length=1, 
         max_length=2, contains=['a'], excludes=['b'])
-    b = items.BuildCheckField(
-        check_field_class=fields.StringCheckField, min_length=1, 
+    b = fields.StringCheckField(min_length=1, 
         max_length=2, contains=['a'], excludes=['c'])
 
 
@@ -53,14 +51,14 @@ print(dict(item))
 # 对scrapy Item进行改写
 import scrapy
 from gggifcheck import fields
-from gggifcheck.items import CheckItem, BuildCheckField
+from gggifcheck.items import CheckItem
 
 
 class ScrapyCheckItem(scrapy.Item, CheckItem):
 
     def __init__(self, *args, **kwargs):
         self._values = {}
-        self.check_fields = {}
+        self._base_values = {}
         if args or kwargs:
             for k, v in dict(*args, **kwargs).items():
                 self[k] = v
@@ -76,12 +74,13 @@ class ScrapyCheckItem(scrapy.Item, CheckItem):
 
     def __setitem__(self, key, value):
         if key in self.fields:
+            self._base_values[key] = value
             field = self.fields[key]
-            build_check_field = field.get('build_check_field')
-            if build_check_field:
-                check_field = build_check_field.build(key=key, value=value)
-                self.check_fields[key] = check_field
-                self._values[key] = check_field.value
+            check_field = field.get('check_field')
+            if isinstance(check_field, fields.CheckField):
+                fe = check_field.from_instance()
+                fe.input(key, value)
+                self._values[key] = fe.value
             else:
                 self._values[key] = value
         else:
@@ -89,7 +88,7 @@ class ScrapyCheckItem(scrapy.Item, CheckItem):
                 f"{self.__class__.__name__} does not support field: {key}")
 
     def __setattr__(self, name, value):
-        if name.startswith('_') or name in ['check_fields']:
+        if name.startswith('_'):
             self.__dict__[name] = value
         else:
             raise AttributeError(
@@ -111,29 +110,12 @@ class ScrapyCheckItem(scrapy.Item, CheckItem):
         # _ = [self[field] for field in self.fields]  # 进行所有字段检查
         return self._values.keys()
 
-    def get_base_value(self, key):
-        if key in self.check_fields:
-            return self.check_fields[key].base_value
-        elif key in self.fields:
-            field = self.fields[key]
-            build_check_field = field.get('build_check_field')
-            if build_check_field:
-                return build_check_field.build_default(
-                    key=key, value=None).base_value
-            return self.fields[key] or None
-        else:
-            raise KeyError(
-                f"{self.__class__.__name__} does not support field: {key}")
-
-
 # 示例
 class PostItem(ScrapyCheckItem):
     id = scrapy.Field(
-        build_check_field=BuildCheckField(
-            check_field_class=fields.MD5CheckField, nullable=False))
+        check_field=fields.MD5CheckField(nullable=False))
     channel = scrapy.Field(
-        build_check_field=BuildCheckField(
-            check_field_class=fields.IntegerCheckField,
+        check_field=fields.IntegerCheckField(
             nullable=False, min_value=1, max_value=6))
 
 

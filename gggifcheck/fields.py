@@ -2,14 +2,20 @@
 # author: kusen
 # email: 1194542196@qq.com
 # date: 2023/4/13
-
-
+import copy
 import re
 import sys
 import datetime
 
 
-class CheckField(object):
+class Filed(object):
+    """
+    普通Field，不进行检查
+    """
+    pass
+
+
+class CheckField(Filed):
     def __init__(self, key=None, value=None, default=None,
                  nullable=True, choices=None, types=None):
         """
@@ -31,6 +37,18 @@ class CheckField(object):
         self._check_args()  # 检查初始参数合法性
         self._type_checked = True  # 类型是否检查
         self._input_checked = False  # input方法对_value进行检查与否
+
+    def from_instance(self):
+        """
+        使用场景：开始创建一个实例模板，后续通过该模板进行多次独立进行检查
+        :return:
+        """
+        new = copy.deepcopy(self)
+        new.key = None
+        new._value = None
+        new._type_checked = True
+        new._input_checked = False
+        return new
 
     def input(self, key, value=None):
         self.key = key
@@ -77,7 +95,8 @@ class CheckField(object):
             self._type_checked = False
             error_msg = ('Field %s input: %s, the type is %s, is not '
                          'types: %s') % (
-                self.key, self._value, type(self._value), self.types)
+                            self.key, self._value, type(self._value),
+                            self.types)
             return [Exception(error_msg)]
         return []
 

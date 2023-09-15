@@ -89,7 +89,7 @@ class CheckField(Filed):
         ]
 
     def _check_types(self):
-        if self._value is None:
+        if self._value is None or not self.types:
             return []
         if not isinstance(self._value, self.types):
             self._type_checked = False

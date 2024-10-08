@@ -245,6 +245,38 @@ class FloatCheckField(CheckField):
         return []
 
 
+class NumberCheckField(CheckField):
+    def __init__(self, min_value=None, max_value=None, *args, **kwargs):
+        self.min_value = min_value if min_value is not None else -sys.maxsize
+        self.max_value = max_value if max_value is not None else sys.maxsize
+        super(NumberCheckField, self).__init__(types=(int, float), *args,
+                                               **kwargs)
+
+    def _check(self):
+        return [
+            *super(NumberCheckField, self)._check(),
+            *self._check_value_between(),
+        ]
+
+    def _check_args(self):
+        super(NumberCheckField, self)._check_args()
+        if not isinstance(self.min_value, self.types) or not isinstance(
+                self.max_value, self.types
+        ):
+            error_msg = ('The min_value and max_value must be'
+                         'types: %s' % self.types)
+            raise Exception(error_msg)
+
+    def _check_value_between(self):
+        if isinstance(self._value, self.types
+                      ) and (self._value < self.min_value
+                             or self._value > self.max_value):
+            error_msg = 'Field %s intput: %s, the value size is between：%s' % (
+                self.key, self._value, (self.min_value, self.max_value))
+            return [Exception(error_msg)]
+        return []
+
+
 class BooleanCheckField(CheckField):
     def __init__(self, *args, **kwargs):
         super(BooleanCheckField, self).__init__(types=(bool,), *args, **kwargs)

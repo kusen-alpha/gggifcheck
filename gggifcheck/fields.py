@@ -119,7 +119,7 @@ class CheckField(Filed):
                 raise Exception(error_msg)
 
     def _check_nullable(self):
-        if self._value is None and not self.nullable and not self.default:
+        if self._value is None and not self.nullable and self.default is None:
             error_msg = 'Field %s intput: %s, but is not None' % (
                 self.key, self._value)
             return [Exception(error_msg)]
